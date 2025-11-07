@@ -60,6 +60,8 @@ export default function NewBookingPage() {
         ...prev,
         equipmentId,
       }))
+      // Skip step 1 if equipment is pre-selected
+      setCurrentStep(2)
     }
   }, [router])
 
@@ -256,7 +258,8 @@ export default function NewBookingPage() {
             {currentStep < 3 ? (
               <Button
                 onClick={() => handleStepChange(currentStep + 1)}
-                className="bg-[#37322F] hover:bg-[#2a2420] text-white font-sans font-medium"
+                disabled={currentStep === 1 && !formData.equipmentId}
+                className="bg-[#37322F] hover:bg-[#2a2420] text-white font-sans font-medium disabled:opacity-50"
               >
                 Next
               </Button>
