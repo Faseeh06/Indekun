@@ -1,21 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import LandingNavbar from "@/components/landing-navbar"
+import { adminApi } from "@/lib/api"
 
 interface AuditLog {
   id: string
   timestamp: string
-  action:
-    | "booking_created"
-    | "booking_approved"
-    | "booking_rejected"
-    | "booking_completed"
-    | "booking_cancelled"
-    | "equipment_damaged"
+  action: string
   user: string
   userEmail: string
   equipment: string
@@ -25,78 +21,75 @@ interface AuditLog {
 }
 
 export default function BookingHistoryPage() {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState("")
   const [filterAction, setFilterAction] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
+  const [loading, setLoading] = useState(true)
+  const [userRole, setUserRole] = useState<"admin">("admin")
 
-  const auditLogs: AuditLog[] = [
-    {
-      id: "AL001",
-      timestamp: "2025-11-08 14:32:00",
-      action: "booking_completed",
-      user: "John Smith",
-      userEmail: "john@university.edu",
-      equipment: "Projector - Sony VPL-FHZ90",
-      details: "Booking completed. Equipment returned in good condition.",
-      status: "success",
-      adminNotes: "No issues reported",
-    },
-    {
-      id: "AL002",
-      timestamp: "2025-11-08 10:15:00",
-      action: "booking_approved",
-      user: "Sarah Johnson",
-      userEmail: "sarah@university.edu",
-      equipment: "Laptop - MacBook Pro 16",
-      details: "Booking request approved by admin. Ready for pickup.",
-      status: "success",
-      adminNotes: "Approved for research project",
-    },
-    {
-      id: "AL003",
-      timestamp: "2025-11-07 16:45:00",
-      action: "equipment_damaged",
-      user: "Mike Davis",
-      userEmail: "mike@university.edu",
-      equipment: "Camera - Canon EOS R5",
-      details: "Equipment returned with minor damage to lens cap.",
-      status: "warning",
-      adminNotes: "Minor damage, within acceptable wear. No charge applied.",
-    },
-    {
-      id: "AL004",
-      timestamp: "2025-11-07 09:20:00",
-      action: "booking_rejected",
-      user: "Emily Wilson",
-      userEmail: "emily@university.edu",
-      equipment: "Drone - DJI Air 3",
-      details: "Booking request rejected due to conflicting reservation.",
-      status: "error",
-      adminNotes: "Equipment already booked during requested dates",
-    },
-    {
-      id: "AL005",
-      timestamp: "2025-11-06 15:30:00",
-      action: "booking_created",
-      user: "David Brown",
-      userEmail: "david@university.edu",
-      equipment: "Microphone - Shure SM7B",
-      details: "New booking request created. Pending review.",
-      status: "success",
-      adminNotes: "Awaiting approval",
-    },
-    {
-      id: "AL006",
-      timestamp: "2025-11-05 11:00:00",
-      action: "booking_cancelled",
-      user: "Lisa Anderson",
-      userEmail: "lisa@university.edu",
-      equipment: "Monitor - LG UltraWide 38",
-      details: "Booking cancelled by user. No reason provided.",
-      status: "success",
-      adminNotes: "User self-cancelled",
-    },
-  ]
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    const storedRole = localStorage.getItem("userRole")
+    
+    if (!storedUser || !storedRole) {
+      router.push("/login")
+      return
+    }
+    
+    try {
+      const user = JSON.parse(storedUser)
+      if (user.role !== "admin") {
+        router.push("/dashboard")
+      }
+    } catch {
+      localStorage.clear()
+      router.push("/login")
+    }
+  }, [router])
+
+  useEffect(() => {
+    loadAuditLogs()
+  }, [])
+
+  const loadAuditLogs = async () => {
+    try {
+      setLoading(true)
+      const res = await adminApi.getLogs(100, 0)
+      // Transform audit logs to match our interface
+      const logs = (res.logs || []).map((log: any) => ({
+        id: log.id,
+        timestamp: log.timestamp ? new Date(log.timestamp).toLocaleString() : "Unknown",
+        action: log.action || "unknown",
+        user: log.user_name || "Unknown",
+        userEmail: log.user_email || "",
+        equipment: log.equipment_name || "Unknown Equipment",
+        details: log.details || "",
+        status: determineStatus(log.action),
+        adminNotes: log.admin_notes,
+      }))
+      setAuditLogs(logs)
+    } catch (error) {
+      console.error("Error loading audit logs:", error)
+      setAuditLogs([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const determineStatus = (action: string): "success" | "warning" | "error" => {
+    if (action.includes("approved") || action.includes("completed") || action.includes("created")) {
+      return "success"
+    }
+    if (action.includes("rejected") || action.includes("cancelled")) {
+      return "error"
+    }
+    if (action.includes("damaged") || action.includes("warning")) {
+      return "warning"
+    }
+    return "success"
+  }
 
   // Filter logs
   const filteredLogs = auditLogs.filter((log) => {
@@ -119,7 +112,7 @@ export default function BookingHistoryPage() {
       booking_cancelled: "Booking Cancelled",
       equipment_damaged: "Equipment Damaged",
     }
-    return labels[action] || action
+    return labels[action] || action.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
   }
 
   const getStatusColor = (status: string) => {
@@ -134,8 +127,6 @@ export default function BookingHistoryPage() {
         return "bg-[#F0F0F0] text-[#555555] border border-[#E0E0E0]"
     }
   }
-
-  const [userRole] = useState<"student" | "faculty">("faculty")
 
   return (
     <div className="w-full min-h-screen bg-[#F7F5F3]">
@@ -230,51 +221,59 @@ export default function BookingHistoryPage() {
         </div>
 
         {/* Audit Logs Table */}
-        <div className="bg-white shadow-[0px_0px_0px_0.9px_rgba(0,0,0,0.08)] overflow-hidden rounded-[6px] border border-[#E0DEDB] overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-[#F7F5F3] border-b border-[#E0DEDB]">
-              <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Timestamp</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Action</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">User</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Equipment</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Status</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="border-b border-[#E0DEDB] hover:bg-[#F7F5F3] transition-colors">
-                  <td className="px-6 py-4 text-sm text-[#605A57] font-sans font-mono">{log.timestamp}</td>
-                  <td className="px-6 py-4 text-sm text-[#37322F] font-sans font-semibold">
-                    {getActionLabel(log.action)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="text-sm font-semibold text-[#37322F] font-sans">{log.user}</p>
-                      <p className="text-xs text-[#828387] font-sans">{log.userEmail}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-[#605A57] font-sans">{log.equipment}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold font-sans ${getStatusColor(log.status)}`}
-                    >
-                      {log.status.charAt(0).toUpperCase() + log.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-[#605A57] font-sans max-w-xs truncate" title={log.details}>
-                    {log.details}
-                  </td>
+        {loading ? (
+          <div className="bg-white shadow-[0px_0px_0px_0.9px_rgba(0,0,0,0.08)] rounded-[6px] border border-[#E0DEDB] p-6">
+            <p className="text-[#605A57] font-sans">Loading audit logs...</p>
+          </div>
+        ) : (
+          <div className="bg-white shadow-[0px_0px_0px_0.9px_rgba(0,0,0,0.08)] overflow-hidden rounded-[6px] border border-[#E0DEDB] overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-[#F7F5F3] border-b border-[#E0DEDB]">
+                <tr>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Timestamp</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Action</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">User</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Equipment</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Status</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Details</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredLogs.length === 0 && (
-          <div className="text-center py-12 bg-white shadow-[0px_0px_0px_0.9px_rgba(0,0,0,0.08)] overflow-hidden rounded-[6px] border border-[#E0DEDB]">
-            <p className="text-[#605A57] text-lg font-sans">No audit logs found matching your criteria.</p>
+              </thead>
+              <tbody>
+                {filteredLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-[#605A57] font-sans">
+                      No audit logs found matching your criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredLogs.map((log) => (
+                    <tr key={log.id} className="border-b border-[#E0DEDB] hover:bg-[#F7F5F3] transition-colors">
+                      <td className="px-6 py-4 text-sm text-[#605A57] font-sans font-mono">{log.timestamp}</td>
+                      <td className="px-6 py-4 text-sm text-[#37322F] font-sans font-semibold">
+                        {getActionLabel(log.action)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="text-sm font-semibold text-[#37322F] font-sans">{log.user}</p>
+                          <p className="text-xs text-[#828387] font-sans">{log.userEmail}</p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-[#605A57] font-sans">{log.equipment}</td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold font-sans ${getStatusColor(log.status)}`}
+                        >
+                          {log.status.charAt(0).toUpperCase() + log.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-[#605A57] font-sans max-w-xs truncate" title={log.details}>
+                        {log.details}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         )}
       </main>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import LandingNavbar from "@/components/landing-navbar"
 import BookingsOverview from "@/components/bookings-overview"
@@ -9,15 +10,33 @@ import UpcomingBookings from "@/components/upcoming-bookings"
 import QuickStats from "@/components/quick-stats"
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [userRole, setUserRole] = useState<"student" | "faculty" | "admin">("student")
 
   useEffect(() => {
-    // Get user role from localStorage
-    const storedRole = localStorage.getItem("userRole") as "student" | "faculty" | "admin" | null
-    if (storedRole && (storedRole === "student" || storedRole === "faculty" || storedRole === "admin")) {
-      setUserRole(storedRole)
+    // Check authentication
+    const storedUser = localStorage.getItem("user")
+    const storedRole = localStorage.getItem("userRole")
+    
+    if (!storedUser || !storedRole) {
+      // Not logged in, redirect to login
+      router.push("/login")
+      return
     }
-  }, [])
+    
+    try {
+      const user = JSON.parse(storedUser)
+      if (user.role === "student" || user.role === "faculty" || user.role === "admin") {
+        setUserRole(user.role)
+      } else {
+        router.push("/login")
+      }
+    } catch {
+      // Invalid user data
+      localStorage.clear()
+      router.push("/login")
+    }
+  }, [router])
 
   return (
     <div className="w-full min-h-screen bg-[#F7F5F3]">
@@ -65,7 +84,7 @@ export default function DashboardPage() {
                     New Booking
                   </Button>
                 </Link>
-                {userRole === "faculty" && (
+                {(userRole === "faculty" || userRole === "admin") && (
                   <Link href="/admin" className="w-full block">
                     <Button className="w-full justify-start bg-transparent border border-[#E0DEDB] text-[#37322F] hover:bg-[#F7F5F3] font-sans font-medium">
                       Admin Panel

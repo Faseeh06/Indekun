@@ -1,69 +1,45 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
+import { bookingApi, equipmentApi } from "@/lib/api"
 
 interface QuickStatsProps {
-  userRole: "student" | "faculty"
+  userRole: "student" | "faculty" | "admin"
 }
 
 export default function QuickStats({ userRole }: QuickStatsProps) {
+  const [activeBookings, setActiveBookings] = useState(0)
+  const [pendingRequests, setPendingRequests] = useState(0)
+  const [availableEquipment, setAvailableEquipment] = useState(0)
+  const [totalBorrowed, setTotalBorrowed] = useState(0)
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        // My bookings
+        const my = await bookingApi.getMy()
+        const now = Date.now()
+        setActiveBookings(
+          (my.bookings || []).filter((b: any) => b.status === 'APPROVED' && new Date(b.end_time).getTime() >= now).length
+        )
+        setPendingRequests((my.bookings || []).filter((b: any) => b.status === 'PENDING').length)
+        setTotalBorrowed((my.bookings || []).length)
+      } catch {}
+      try {
+        // Equipment (available count)
+        const eq = await equipmentApi.getAll()
+        setAvailableEquipment((eq.equipment || []).filter((e: any) => e.is_available !== false).length)
+      } catch {}
+    }
+    load()
+  }, [])
+
   const stats = [
-    {
-      label: "Active Bookings",
-      value: "2",
-      icon: (
-        <svg className="w-6 h-6 text-[#37322f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m0 10v10l8 4m8-4l-8 4"
-          />
-        </svg>
-      ),
-    },
-    {
-      label: "Pending Requests",
-      value: "1",
-      icon: (
-        <svg className="w-6 h-6 text-[#37322f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-      ),
-    },
-    {
-      label: "Available Equipment",
-      value: "156",
-      icon: (
-        <svg className="w-6 h-6 text-[#37322f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-      ),
-    },
-    {
-      label: "Total Borrowed",
-      value: "8",
-      icon: (
-        <svg className="w-6 h-6 text-[#37322f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-          />
-        </svg>
-      ),
-    },
+    { label: "Active Bookings", value: String(activeBookings) },
+    { label: "Pending Requests", value: String(pendingRequests) },
+    { label: "Available Equipment", value: String(availableEquipment) },
+    { label: "Total Borrowed", value: String(totalBorrowed) },
   ]
 
   return (
@@ -76,7 +52,6 @@ export default function QuickStats({ userRole }: QuickStatsProps) {
                 <p className="text-sm text-[#605A57] font-medium">{stat.label}</p>
                 <p className="text-2xl font-bold text-[#37322F] mt-2">{stat.value}</p>
               </div>
-              <div>{stat.icon}</div>
             </div>
           </CardContent>
         </Card>

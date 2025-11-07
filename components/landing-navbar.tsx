@@ -2,6 +2,8 @@
 
 import { useRouter, usePathname } from "next/navigation"
 import Link from "next/link"
+import { signOut } from "firebase/auth"
+import { auth } from "@/lib/firebase-client"
 
 interface NavItem {
   label: string
@@ -41,10 +43,28 @@ export default function LandingNavbar({
     if (rightButtonOnClick) {
       rightButtonOnClick()
     } else if (rightButtonLabel === "Logout" || rightButtonLabel === "Log out") {
-      // Handle logout
-      localStorage.removeItem("userRole")
-      localStorage.removeItem("userEmail")
-      router.push("/login")
+      console.log("Logout button clicked.")
+      if (auth) {
+        console.log("Firebase auth object exists. Calling signOut...")
+        signOut(auth)
+          .then(() => {
+            console.log("Firebase signOut successful.")
+            localStorage.clear()
+            console.log("localStorage cleared.")
+            window.location.href = "/login"
+          })
+          .catch((error) => {
+            console.error("Logout error:", error)
+            // Still try to force it
+            localStorage.clear()
+            console.log("localStorage cleared after error.")
+            window.location.href = "/login"
+          })
+      } else {
+        console.warn("Firebase auth object not found. Forcing logout.")
+        localStorage.clear()
+        window.location.href = "/login"
+      }
     } else if (rightButtonHref) {
       router.push(rightButtonHref)
     }

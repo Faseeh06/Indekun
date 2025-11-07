@@ -1,9 +1,11 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { signInWithCustomToken } from "firebase/auth"
+import { auth } from "@/lib/firebase-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
@@ -18,6 +20,37 @@ export default function SignupPage() {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+    // Check if user is already logged in
+    const storedUser = localStorage.getItem('user')
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser)
+        if (user.role === 'admin') {
+          router.push('/admin')
+        } else {
+          router.push('/dashboard')
+        }
+      } catch (error) {
+        // Invalid stored user data, clear it
+        localStorage.removeItem('user')
+      }
+    }
+  }, [router])
+
+  // Don't render until mounted to avoid hydration issues
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#F7F5F3] flex flex-col items-center justify-center p-4">
+        <div className="text-center">
+          <p className="text-[#605A57]">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   const handleRoleSelect = (role: UserRole) => {
     setSelectedRole(role)
@@ -57,22 +90,64 @@ export default function SignupPage() {
     setIsLoading(true)
 
     try {
-      // Simulate signup process
-      console.log("Signup attempt:", { name, email, password, role: selectedRole })
+      // Create user account via API (which will create in Firebase Auth and Firestore)
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          password,
+          role: selectedRole,
+        }),
+      })
 
-      // Store user data in localStorage (for demo purposes)
-      localStorage.setItem("userRole", selectedRole)
-      localStorage.setItem("userEmail", email)
-      localStorage.setItem("userName", name)
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Signup failed')
+      }
+
+      const data = await response.json()
+      const { token: customToken, user } = data
+
+      if (!auth) {
+        throw new Error('Firebase is not configured. Please set up Firebase environment variables.')
+      }
+
+      // Exchange custom token for ID token
+      const userCredential = await signInWithCustomToken(auth, customToken)
+      const idToken = await userCredential.user.getIdToken()
+
+      // Store token and user data
+      localStorage.setItem('idToken', idToken)
+      localStorage.setItem('user', JSON.stringify(user))
+      localStorage.setItem('userRole', user.role)
+      localStorage.setItem('userEmail', user.email)
+      localStorage.setItem('userName', user.name)
 
       // Route based on role
-      if (selectedRole === "admin") {
-        router.push("/admin")
+      if (user.role === 'admin') {
+        router.push('/admin')
       } else {
-        router.push("/dashboard")
+        router.push('/dashboard')
       }
-    } catch (err) {
-      setError("Signup failed. Please try again.")
+    } catch (err: any) {
+      console.error('Signup error:', err)
+      let errorMessage = 'Signup failed. Please try again.'
+      
+      if (err.code === 'auth/email-already-in-use') {
+        errorMessage = 'An account with this email already exists'
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address'
+      } else if (err.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak'
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+      
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -106,7 +181,8 @@ export default function SignupPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 border border-[#E0DEDB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#37322F] bg-white text-[#37322F] placeholder:text-[#828387]"
+                disabled={isLoading}
+                className="w-full px-4 py-2.5 border border-[#E0DEDB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#37322F] bg-white text-[#37322F] placeholder:text-[#828387] disabled:opacity-50"
               />
             </div>
 
@@ -121,7 +197,8 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 border border-[#E0DEDB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#37322F] bg-white text-[#37322F] placeholder:text-[#828387]"
+                disabled={isLoading}
+                className="w-full px-4 py-2.5 border border-[#E0DEDB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#37322F] bg-white text-[#37322F] placeholder:text-[#828387] disabled:opacity-50"
               />
             </div>
 
@@ -132,11 +209,12 @@ export default function SignupPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="Enter your password (min 6 characters)"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 border border-[#E0DEDB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#37322F] bg-white text-[#37322F] placeholder:text-[#828387]"
+                disabled={isLoading}
+                className="w-full px-4 py-2.5 border border-[#E0DEDB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#37322F] bg-white text-[#37322F] placeholder:text-[#828387] disabled:opacity-50"
               />
             </div>
 
@@ -151,9 +229,17 @@ export default function SignupPage() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="w-full px-4 py-2.5 border border-[#E0DEDB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#37322F] bg-white text-[#37322F] placeholder:text-[#828387]"
+                disabled={isLoading}
+                className="w-full px-4 py-2.5 border border-[#E0DEDB] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#37322F] bg-white text-[#37322F] placeholder:text-[#828387] disabled:opacity-50"
               />
             </div>
+
+            {!auth && (
+              <div className="p-3 bg-[#FFF4E6] border border-[#FFD699] rounded-lg text-[#8B4513] text-sm font-sans">
+                <p className="font-semibold mb-1">Firebase Not Configured</p>
+                <p className="text-xs">Please set NEXT_PUBLIC_FIREBASE_* environment variables. See FIREBASE_SETUP.md for details.</p>
+              </div>
+            )}
 
             {error && (
               <div className="p-3 bg-[#FFE8E8] border border-[#FFB3B3] rounded-lg text-[#7D2C2C] text-sm font-sans">
@@ -174,7 +260,8 @@ export default function SignupPage() {
               <Button
                 type="button"
                 onClick={() => handleRoleSelect("student")}
-                className={`border border-[#E0DEDB] py-2.5 px-3 rounded-lg transition-colors font-sans font-medium ${
+                disabled={isLoading}
+                className={`border border-[#E0DEDB] py-2.5 px-3 rounded-lg transition-colors font-sans font-medium disabled:opacity-50 ${
                   selectedRole === "student"
                     ? "bg-[#37322F] text-white hover:bg-[#2a2420]"
                     : "text-[#37322F] hover:bg-[#F7F5F3] bg-transparent"
@@ -185,7 +272,8 @@ export default function SignupPage() {
               <Button
                 type="button"
                 onClick={() => handleRoleSelect("faculty")}
-                className={`border border-[#E0DEDB] py-2.5 px-3 rounded-lg transition-colors font-sans font-medium ${
+                disabled={isLoading}
+                className={`border border-[#E0DEDB] py-2.5 px-3 rounded-lg transition-colors font-sans font-medium disabled:opacity-50 ${
                   selectedRole === "faculty"
                     ? "bg-[#37322F] text-white hover:bg-[#2a2420]"
                     : "text-[#37322F] hover:bg-[#F7F5F3] bg-transparent"
@@ -196,7 +284,8 @@ export default function SignupPage() {
               <Button
                 type="button"
                 onClick={() => handleRoleSelect("admin")}
-                className={`border border-[#E0DEDB] py-2.5 px-3 rounded-lg transition-colors font-sans font-medium ${
+                disabled={isLoading}
+                className={`border border-[#E0DEDB] py-2.5 px-3 rounded-lg transition-colors font-sans font-medium disabled:opacity-50 ${
                   selectedRole === "admin"
                     ? "bg-[#37322F] text-white hover:bg-[#2a2420]"
                     : "text-[#37322F] hover:bg-[#F7F5F3] bg-transparent"
@@ -209,7 +298,7 @@ export default function SignupPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#37322F] hover:bg-[#2a2420] text-white font-semibold py-2.5 px-4 rounded-lg transition-colors duration-200 font-sans"
+              className="w-full bg-[#37322F] hover:bg-[#2a2420] text-white font-semibold py-2.5 px-4 rounded-lg transition-colors duration-200 font-sans disabled:opacity-50"
             >
               {isLoading ? "Creating account..." : "Sign Up"}
             </Button>
@@ -229,4 +318,3 @@ export default function SignupPage() {
     </div>
   )
 }
-

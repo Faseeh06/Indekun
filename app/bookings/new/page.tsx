@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -9,11 +9,14 @@ import LandingNavbar from "@/components/landing-navbar"
 import BookingFormStep1 from "@/components/booking-form-step1"
 import BookingFormStep2 from "@/components/booking-form-step2"
 import BookingFormStep3 from "@/components/booking-form-step3"
+import { bookingApi } from "@/lib/api"
 
 export default function NewBookingPage() {
   const router = useRouter()
-  const [userRole] = useState<"student" | "faculty">("student")
+  const [userRole, setUserRole] = useState<"student" | "faculty">("student")
   const [currentStep, setCurrentStep] = useState(1)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
   const [formData, setFormData] = useState({
     equipmentId: "",
     equipmentName: "",
@@ -23,10 +26,46 @@ export default function NewBookingPage() {
     endTime: "17:00",
     purpose: "",
     additionalNotes: "",
+    priority: "medium" as "low" | "medium" | "high",
   })
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    const storedRole = localStorage.getItem("userRole")
+    
+    if (!storedUser || !storedRole) {
+      router.push("/login")
+      return
+    }
+    
+    try {
+      const user = JSON.parse(storedUser)
+      if (user.role === "admin") {
+        router.push("/admin")
+      } else if (user.role === "student" || user.role === "faculty") {
+        setUserRole(user.role)
+      } else {
+        router.push("/login")
+      }
+    } catch {
+      localStorage.clear()
+      router.push("/login")
+    }
+
+    // Check for equipment ID in URL params
+    const params = new URLSearchParams(window.location.search)
+    const equipmentId = params.get("equipment")
+    if (equipmentId && !formData.equipmentId) {
+      setFormData((prev) => ({
+        ...prev,
+        equipmentId,
+      }))
+    }
+  }, [router])
 
   const handleStepChange = (step: number) => {
     setCurrentStep(step)
+    setError("")
   }
 
   const handleFormDataChange = (key: string, value: string) => {
@@ -39,16 +78,41 @@ export default function NewBookingPage() {
   const handleSubmit = async () => {
     // Validate form
     if (!formData.equipmentId || !formData.startDate || !formData.endDate || !formData.purpose) {
-      alert("Please fill in all required fields")
+      setError("Please fill in all required fields")
       return
     }
 
-    // Simulate booking submission
-    console.log("Booking submitted:", formData)
+    // Validate dates
+    const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`)
+    const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`)
 
-    // Show success message and redirect
-    alert("Booking request submitted successfully!")
-    router.push("/bookings")
+    if (endDateTime <= startDateTime) {
+      setError("End date/time must be after start date/time")
+      return
+    }
+
+    setIsLoading(true)
+    setError("")
+
+    try {
+      await bookingApi.create({
+        equipment_id: formData.equipmentId,
+        start_time: startDateTime.toISOString(),
+        end_time: endDateTime.toISOString(),
+        purpose: formData.purpose,
+        notes: formData.additionalNotes || undefined,
+        priority: formData.priority,
+      })
+
+      // Show success message and redirect
+      alert("Booking request submitted successfully!")
+      router.push("/bookings")
+    } catch (err: any) {
+      console.error("Booking error:", err)
+      setError(err.message || "Failed to submit booking request")
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const steps = [
@@ -139,6 +203,12 @@ export default function NewBookingPage() {
           </CardHeader>
 
           <CardContent>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+                {error}
+              </div>
+            )}
+
             {currentStep === 1 && (
               <BookingFormStep1
                 selectedEquipmentId={formData.equipmentId}
@@ -168,6 +238,8 @@ export default function NewBookingPage() {
                 additionalNotes={formData.additionalNotes}
                 onPurposeChange={(purpose) => handleFormDataChange("purpose", purpose)}
                 onNotesChange={(notes) => handleFormDataChange("additionalNotes", notes)}
+                priority={formData.priority}
+                onPriorityChange={(priority) => handleFormDataChange("priority", priority)}
               />
             )}
           </CardContent>
@@ -175,19 +247,26 @@ export default function NewBookingPage() {
           <CardFooter className="flex justify-between pt-6">
             <Button
               onClick={() => handleStepChange(currentStep - 1)}
-              disabled={currentStep === 1}
+              disabled={currentStep === 1 || isLoading}
               className="bg-transparent border border-[#E0DEDB] text-[#37322F] hover:bg-[#F7F5F3] font-sans font-medium"
             >
               Previous
             </Button>
 
             {currentStep < 3 ? (
-              <Button onClick={() => handleStepChange(currentStep + 1)} className="bg-[#37322F] hover:bg-[#2a2420] text-white font-sans font-medium">
+              <Button
+                onClick={() => handleStepChange(currentStep + 1)}
+                className="bg-[#37322F] hover:bg-[#2a2420] text-white font-sans font-medium"
+              >
                 Next
               </Button>
             ) : (
-              <Button onClick={handleSubmit} className="bg-[#37322F] hover:bg-[#2a2420] text-white font-sans font-medium">
-                Submit Booking
+              <Button
+                onClick={handleSubmit}
+                disabled={isLoading}
+                className="bg-[#37322F] hover:bg-[#2a2420] text-white font-sans font-medium disabled:opacity-50"
+              >
+                {isLoading ? "Submitting..." : "Submit Booking"}
               </Button>
             )}
           </CardFooter>
@@ -223,6 +302,12 @@ export default function NewBookingPage() {
                   <div className="flex justify-between">
                     <span className="text-[#605A57]">Purpose:</span>
                     <span className="font-medium text-[#37322F]">{formData.purpose}</span>
+                  </div>
+                )}
+                {formData.priority && (
+                  <div className="flex justify-between">
+                    <span className="text-[#605A57]">Priority:</span>
+                    <span className="font-medium text-[#37322F] capitalize">{formData.priority}</span>
                   </div>
                 )}
               </div>

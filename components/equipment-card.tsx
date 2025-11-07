@@ -45,8 +45,7 @@ export default function EquipmentCard({ equipment }: EquipmentCardProps) {
   }
 
   return (
-    <Link href={`/equipment/${equipment.id}`}>
-      <div className="bg-white shadow-[0px_0px_0px_0.9px_rgba(0,0,0,0.08)] overflow-hidden rounded-[6px] border border-[#E0DEDB] hover:shadow-lg transition-all cursor-pointer h-full flex flex-col">
+    <div className="bg-white shadow-[0px_0px_0px_0.9px_rgba(0,0,0,0.08)] overflow-hidden rounded-[6px] border border-[#E0DEDB] hover:shadow-lg transition-all cursor-pointer h-full flex flex-col">
         {/* Image */}
         <div className="relative h-56 bg-[#F7F5F3] overflow-hidden">
           <img
@@ -88,22 +87,23 @@ export default function EquipmentCard({ equipment }: EquipmentCardProps) {
           <p className="text-sm text-[#605A57] mb-4 font-sans">📍 {equipment.location}</p>
 
           {/* Book Button */}
-          <button
-            onClick={(e) => {
-              e.preventDefault()
-              // Handle booking logic here
-            }}
-            className={`w-full py-3 px-4 rounded-lg font-medium text-base transition-colors font-sans ${
-              equipment.availability === "available"
-                ? "bg-[#37322F] text-white hover:bg-[#2a2420]"
-                : "bg-[#E0DEDB] text-[#828387] cursor-not-allowed"
-            }`}
-            disabled={equipment.availability !== "available"}
-          >
-            {equipment.availability === "available" ? "Book Now" : "Not Available"}
-          </button>
+          {equipment.availability === "available" ? (
+            <Link
+              href={`/bookings/new?equipment=${equipment.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full py-3 px-4 rounded-lg font-medium text-base transition-colors font-sans text-center block bg-[#37322F] text-white hover:bg-[#2a2420]"
+            >
+              Book Now
+            </Link>
+          ) : (
+            <button
+              disabled
+              className="w-full py-3 px-4 rounded-lg font-medium text-base font-sans text-center bg-[#E0DEDB] text-[#828387] cursor-not-allowed"
+            >
+              Not Available
+            </button>
+          )}
         </div>
       </div>
-    </Link>
   )
 }

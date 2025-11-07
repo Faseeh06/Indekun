@@ -1,92 +1,121 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import LandingNavbar from "@/components/landing-navbar"
 import PendingRequestsTable from "@/components/pending-requests-table"
 import RequestDetailModal from "@/components/request-detail-modal"
+import { adminApi } from "@/lib/api"
 
 interface PendingRequest {
   id: string
-  equipment: string
-  user: string
-  userEmail: string
-  requestDate: string
-  startDate: string
-  endDate: string
+  equipment_name: string
+  user_name: string
+  user_email: string
+  user_role: "student" | "faculty"
+  start_time: string
+  end_time: string
   purpose: string
-  notes: string
+  notes: string | null
   priority: "low" | "medium" | "high"
-  userRole: "student" | "faculty"
+  created_at: string
 }
 
 export default function PendingRequestsPage() {
+  const router = useRouter()
   const [selectedRequest, setSelectedRequest] = useState<PendingRequest | null>(null)
   const [sortBy, setSortBy] = useState("date")
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [userRole, setUserRole] = useState<"admin">("admin")
 
-  const pendingRequests: PendingRequest[] = [
-    {
-      id: "PR001",
-      equipment: "Projector - Sony VPL-FHZ90",
-      user: "John Smith",
-      userEmail: "john@university.edu",
-      requestDate: "2025-11-07",
-      startDate: "2025-11-15",
-      endDate: "2025-11-17",
-      purpose: "Class Presentation",
-      notes: "Will be used for undergraduate lecture on digital marketing",
-      priority: "medium",
-      userRole: "faculty",
-    },
-    {
-      id: "PR002",
-      equipment: "Laptop - MacBook Pro 16",
-      user: "Sarah Johnson",
-      userEmail: "sarah@university.edu",
-      requestDate: "2025-11-06",
-      startDate: "2025-11-10",
-      endDate: "2025-11-12",
-      purpose: "Research Project",
-      notes: "Needed for data analysis and video editing for thesis project",
-      priority: "high",
-      userRole: "student",
-    },
-    {
-      id: "PR003",
-      equipment: "Camera - Canon EOS R5",
-      user: "Mike Davis",
-      userEmail: "mike@university.edu",
-      requestDate: "2025-11-05",
-      startDate: "2025-11-20",
-      endDate: "2025-11-25",
-      purpose: "Event Coverage",
-      notes: "Covering university annual gala and networking event",
-      priority: "medium",
-      userRole: "student",
-    },
-    {
-      id: "PR004",
-      equipment: "Drone - DJI Air 3",
-      user: "Emily Wilson",
-      userEmail: "emily@university.edu",
-      requestDate: "2025-11-08",
-      startDate: "2025-11-12",
-      endDate: "2025-11-14",
-      purpose: "Aerial Photography",
-      notes: "Campus documentation for annual report photography",
-      priority: "low",
-      userRole: "faculty",
-    },
-  ]
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user")
+    const storedRole = localStorage.getItem("userRole")
+    
+    if (!storedUser || !storedRole) {
+      router.push("/login")
+      return
+    }
+    
+    try {
+      const user = JSON.parse(storedUser)
+      if (user.role !== "admin") {
+        router.push("/dashboard")
+      }
+    } catch {
+      localStorage.clear()
+      router.push("/login")
+    }
+  }, [router])
+
+  useEffect(() => {
+    loadPendingRequests()
+  }, [])
+
+  const loadPendingRequests = async () => {
+    try {
+      setLoading(true)
+      setError("")
+      const response = await adminApi.getPendingBookings()
+      setPendingRequests(response.bookings || [])
+    } catch (err: any) {
+      console.error("Error loading pending requests:", err)
+      setError(err.message || "Failed to load pending requests")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleApprove = async (requestId: string, adminNotes?: string) => {
+    try {
+      await adminApi.updateBooking(requestId, "APPROVED", adminNotes)
+      await loadPendingRequests()
+      setSelectedRequest(null)
+      alert("Booking approved successfully!")
+    } catch (err: any) {
+      alert(err.message || "Failed to approve booking")
+    }
+  }
+
+  const handleReject = async (requestId: string, adminNotes?: string) => {
+    try {
+      await adminApi.updateBooking(requestId, "REJECTED", adminNotes)
+      await loadPendingRequests()
+      setSelectedRequest(null)
+      alert("Booking rejected")
+    } catch (err: any) {
+      alert(err.message || "Failed to reject booking")
+    }
+  }
+
+  // Transform for table component
+  const transformedRequests = pendingRequests.map((req) => ({
+    id: req.id,
+    equipment: req.equipment_name,
+    user: req.user_name,
+    userEmail: req.user_email,
+    requestDate: new Date(req.created_at).toISOString().split("T")[0],
+    startDate: new Date(req.start_time).toISOString().split("T")[0],
+    endDate: new Date(req.end_time).toISOString().split("T")[0],
+    purpose: req.purpose,
+    notes: req.notes || "",
+    priority: req.priority,
+    userRole: req.user_role,
+  }))
 
   const stats = [
     { label: "Pending Requests", value: pendingRequests.length, color: "#37322F" },
-    { label: "High Priority", value: "1", color: "#D97706" },
+    {
+      label: "High Priority",
+      value: pendingRequests.filter((r) => r.priority === "high").length.toString(),
+      color: "#D97706",
+    },
     { label: "Average Wait Time", value: "2.3 days", color: "#059669" },
   ]
-
-  const [userRole] = useState<"student" | "faculty">("faculty")
 
   return (
     <div className="w-full min-h-screen bg-[#F7F5F3]">
@@ -114,6 +143,15 @@ export default function PendingRequestsPage() {
           </Link>
         </div>
 
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+            {error}
+            <Button onClick={loadPendingRequests} variant="outline" className="ml-4">
+              Retry
+            </Button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
           {stats.map((stat, index) => (
             <div
@@ -139,24 +177,43 @@ export default function PendingRequestsPage() {
         </div>
 
         {/* Pending Requests Table */}
-        <PendingRequestsTable requests={pendingRequests} onRequestSelect={setSelectedRequest} sortBy={sortBy} />
-      </main>
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-[#605A57] text-lg">Loading pending requests...</p>
+          </div>
+        ) : (
+          <PendingRequestsTable
+            requests={transformedRequests}
+            onRequestSelect={(req) => {
+              const original = pendingRequests.find((r) => r.id === req.id)
+              if (original) setSelectedRequest(original)
+            }}
+            sortBy={sortBy}
+          />
+        )}
 
-      {/* Request Detail Modal */}
-      {selectedRequest && (
-        <RequestDetailModal
-          request={selectedRequest}
-          onClose={() => setSelectedRequest(null)}
-          onApprove={() => {
-            alert("Request approved!")
-            setSelectedRequest(null)
-          }}
-          onReject={() => {
-            alert("Request rejected!")
-            setSelectedRequest(null)
-          }}
-        />
-      )}
+        {/* Request Detail Modal */}
+        {selectedRequest && (
+          <RequestDetailModal
+            request={{
+              id: selectedRequest.id,
+              equipment: selectedRequest.equipment_name,
+              user: selectedRequest.user_name,
+              userEmail: selectedRequest.user_email,
+              requestDate: new Date(selectedRequest.created_at).toISOString().split("T")[0],
+              startDate: new Date(selectedRequest.start_time).toISOString().split("T")[0],
+              endDate: new Date(selectedRequest.end_time).toISOString().split("T")[0],
+              purpose: selectedRequest.purpose,
+              notes: selectedRequest.notes || "",
+              priority: selectedRequest.priority,
+              userRole: selectedRequest.user_role,
+            }}
+            onClose={() => setSelectedRequest(null)}
+            onApprove={(adminNotes) => handleApprove(selectedRequest.id, adminNotes)}
+            onReject={(adminNotes) => handleReject(selectedRequest.id, adminNotes)}
+          />
+        )}
+      </main>
     </div>
   )
 }

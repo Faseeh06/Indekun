@@ -1,21 +1,38 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import LandingNavbar from "@/components/landing-navbar"
 import AdminStats from "@/components/admin-stats"
 import AdminTabs from "@/components/admin-tabs"
 
 export default function AdminPage() {
+  const router = useRouter()
   const [userRole, setUserRole] = useState<"student" | "faculty" | "admin">("admin")
   const [activeTab, setActiveTab] = useState("overview")
 
   useEffect(() => {
-    // Get user role from localStorage
-    const storedRole = localStorage.getItem("userRole") as "student" | "faculty" | "admin" | null
-    if (storedRole && (storedRole === "student" || storedRole === "faculty" || storedRole === "admin")) {
-      setUserRole(storedRole)
+    const storedUser = localStorage.getItem("user")
+    const storedRole = localStorage.getItem("userRole")
+    
+    if (!storedUser || !storedRole) {
+      router.push("/login")
+      return
     }
-  }, [])
+    
+    try {
+      const user = JSON.parse(storedUser)
+      if (user.role === "admin") {
+        setUserRole("admin")
+      } else {
+        // Not admin, redirect to dashboard
+        router.push("/dashboard")
+      }
+    } catch {
+      localStorage.clear()
+      router.push("/login")
+    }
+  }, [router])
 
   return (
     <div className="w-full min-h-screen bg-[#F7F5F3]">

@@ -21,21 +21,26 @@ interface PendingRequest {
 interface RequestDetailModalProps {
   request: PendingRequest
   onClose: () => void
-  onApprove: () => void
-  onReject: () => void
+  onApprove: (adminNotes?: string) => void
+  onReject: (adminNotes?: string) => void
 }
 
 export default function RequestDetailModal({ request, onClose, onApprove, onReject }: RequestDetailModalProps) {
   const [rejectionReason, setRejectionReason] = useState("")
+  const [approvalNotes, setApprovalNotes] = useState("")
   const [showRejectionForm, setShowRejectionForm] = useState(false)
+  const [showApprovalNotes, setShowApprovalNotes] = useState(false)
 
   const handleReject = () => {
-    if (!rejectionReason.trim()) {
-      alert("Please provide a reason for rejection")
-      return
-    }
-    onReject()
+    onReject(rejectionReason.trim() || undefined)
     setShowRejectionForm(false)
+    setRejectionReason("")
+  }
+
+  const handleApprove = () => {
+    onApprove(approvalNotes.trim() || undefined)
+    setShowApprovalNotes(false)
+    setApprovalNotes("")
   }
 
   const daysUntilNeeded = Math.ceil(
@@ -130,15 +135,32 @@ export default function RequestDetailModal({ request, onClose, onApprove, onReje
             </div>
           </div>
 
+          {/* Approval Notes */}
+          {showApprovalNotes && (
+            <div className="border-t border-slate-200 pt-4">
+              <h4 className="font-semibold text-slate-900 mb-3">Approval Notes (Optional)</h4>
+              <textarea
+                value={approvalNotes}
+                onChange={(e) => setApprovalNotes(e.target.value)}
+                placeholder="Add any notes about this approval..."
+                rows={3}
+                maxLength={200}
+                className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              />
+              <p className="text-xs text-slate-500 mt-2">{approvalNotes.length}/200 characters</p>
+            </div>
+          )}
+
           {/* Rejection Form */}
           {showRejectionForm && (
             <div className="border-t border-slate-200 pt-4">
-              <h4 className="font-semibold text-slate-900 mb-3">Rejection Reason</h4>
+              <h4 className="font-semibold text-slate-900 mb-3">Rejection Reason (Optional)</h4>
               <textarea
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 placeholder="Explain why this request is being rejected..."
                 rows={4}
+                maxLength={200}
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
               />
               <p className="text-xs text-slate-500 mt-2">{rejectionReason.length}/200 characters</p>
@@ -161,26 +183,44 @@ export default function RequestDetailModal({ request, onClose, onApprove, onReje
             Close
           </Button>
 
-          {!showRejectionForm ? (
+          {!showRejectionForm && !showApprovalNotes ? (
             <>
               <Button
                 variant="outline"
                 className="text-red-600 hover:text-red-700 bg-transparent"
-                onClick={() => setShowRejectionForm(true)}
+                onClick={() => {
+                  setShowRejectionForm(true)
+                  setShowApprovalNotes(false)
+                }}
               >
                 Reject Request
               </Button>
-              <Button onClick={onApprove} className="bg-green-600 hover:bg-green-700">
+              <Button
+                onClick={() => {
+                  setShowApprovalNotes(true)
+                  setShowRejectionForm(false)
+                }}
+                className="bg-green-600 hover:bg-green-700"
+              >
                 Approve Request
               </Button>
             </>
-          ) : (
+          ) : showRejectionForm ? (
             <>
               <Button variant="outline" onClick={() => setShowRejectionForm(false)}>
                 Cancel
               </Button>
               <Button onClick={handleReject} className="bg-red-600 hover:bg-red-700">
                 Confirm Rejection
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setShowApprovalNotes(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleApprove} className="bg-green-600 hover:bg-green-700">
+                Confirm Approval
               </Button>
             </>
           )}

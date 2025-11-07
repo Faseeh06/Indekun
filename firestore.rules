@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow all reads and writes for now (since we're using Admin SDK on backend)
+    // Admin SDK bypasses these rules, but this prevents client errors
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+
