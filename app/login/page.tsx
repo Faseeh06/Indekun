@@ -9,28 +9,10 @@ import { auth } from "@/lib/firebase-client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 
-type UserRole = "student" | "faculty" | "admin"
-
-const DEMO_CREDENTIALS = {
-  student: {
-    email: "student@university.edu",
-    password: "student123",
-  },
-  faculty: {
-    email: "faculty@university.edu",
-    password: "faculty123",
-  },
-  admin: {
-    email: "admin@university.edu",
-    password: "admin123",
-  },
-}
-
 export default function LoginPage() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [mounted, setMounted] = useState(false)
@@ -72,13 +54,6 @@ export default function LoginPage() {
         </div>
       </div>
     )
-  }
-
-  const handleRoleSelect = (role: UserRole) => {
-    setSelectedRole(role)
-    setEmail(DEMO_CREDENTIALS[role].email)
-    setPassword(DEMO_CREDENTIALS[role].password)
-    setError("")
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -245,53 +220,6 @@ export default function LoginPage() {
               Sign in with SSO (Coming Soon)
             </Button>
 
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[#E0DEDB]"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-3 bg-white text-[#605A57] font-sans">Quick fill (demo)</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-3">
-              <Button
-                type="button"
-                onClick={() => handleRoleSelect("student")}
-                disabled={isLoading}
-                className={`border border-[#E0DEDB] py-2.5 px-3 rounded-lg transition-colors font-sans font-medium disabled:opacity-50 ${
-                  selectedRole === "student"
-                    ? "bg-[#37322F] text-white hover:bg-[#2a2420]"
-                    : "text-[#37322F] hover:bg-[#F7F5F3] bg-transparent"
-                }`}
-              >
-                Student
-              </Button>
-              <Button
-                type="button"
-                onClick={() => handleRoleSelect("faculty")}
-                disabled={isLoading}
-                className={`border border-[#E0DEDB] py-2.5 px-3 rounded-lg transition-colors font-sans font-medium disabled:opacity-50 ${
-                  selectedRole === "faculty"
-                    ? "bg-[#37322F] text-white hover:bg-[#2a2420]"
-                    : "text-[#37322F] hover:bg-[#F7F5F3] bg-transparent"
-                }`}
-              >
-                Faculty
-              </Button>
-              <Button
-                type="button"
-                onClick={() => handleRoleSelect("admin")}
-                disabled={isLoading}
-                className={`border border-[#E0DEDB] py-2.5 px-3 rounded-lg transition-colors font-sans font-medium disabled:opacity-50 ${
-                  selectedRole === "admin"
-                    ? "bg-[#37322F] text-white hover:bg-[#2a2420]"
-                    : "text-[#37322F] hover:bg-[#F7F5F3] bg-transparent"
-                }`}
-              >
-                Admin
-              </Button>
-            </div>
           </form>
 
           {/* Footer Links */}
@@ -302,28 +230,6 @@ export default function LoginPage() {
                 Sign up here
               </Link>
             </p>
-          </div>
-        </div>
-
-        {/* Demo Credentials */}
-        <div className="mt-8 p-4 bg-white border border-[#E0DEDB] rounded-lg shadow-[0px_0px_0px_0.9px_rgba(0,0,0,0.08)]">
-          <p className="text-sm font-semibold text-[#37322F] mb-3 font-sans">Demo Credentials:</p>
-          <div className="space-y-2">
-            <div>
-              <p className="text-xs font-medium text-[#37322F] mb-1 font-sans">Student:</p>
-              <p className="text-xs text-[#605A57] font-mono">Email: {DEMO_CREDENTIALS.student.email}</p>
-              <p className="text-xs text-[#605A57] font-mono">Password: {DEMO_CREDENTIALS.student.password}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-[#37322F] mb-1 font-sans">Faculty:</p>
-              <p className="text-xs text-[#605A57] font-mono">Email: {DEMO_CREDENTIALS.faculty.email}</p>
-              <p className="text-xs text-[#605A57] font-mono">Password: {DEMO_CREDENTIALS.faculty.password}</p>
-            </div>
-            <div>
-              <p className="text-xs font-medium text-[#37322F] mb-1 font-sans">Admin:</p>
-              <p className="text-xs text-[#605A57] font-mono">Email: {DEMO_CREDENTIALS.admin.email}</p>
-              <p className="text-xs text-[#605A57] font-mono">Password: {DEMO_CREDENTIALS.admin.password}</p>
-            </div>
           </div>
         </div>
       </div>
