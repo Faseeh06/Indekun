@@ -77,15 +77,15 @@ export default function BookingsList({ bookings, onRefresh }: BookingsListProps)
   }
 
   return (
-    <div className="space-y-4">
+      <div className="space-y-4">
       {bookings.map((booking) => (
-        <Card
-          key={booking.id}
+            <Card
+              key={booking.id}
           className="bg-white border border-[#E0DEDB] shadow-[0px_0px_0px_0.9px_rgba(0,0,0,0.08)]"
-        >
+            >
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
-              <div className="flex-1">
+                  <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
                   <h3 className="font-semibold text-[#37322F] text-lg">{booking.equipment_name}</h3>
                   <Badge variant="outline" className={`border ${getStatusColor(booking.status)}`}>
@@ -103,9 +103,9 @@ export default function BookingsList({ bookings, onRefresh }: BookingsListProps)
                       }`}
                     >
                       {booking.priority} priority
-                    </Badge>
+                      </Badge>
                   )}
-                </div>
+                    </div>
                 <div className="space-y-1 text-sm text-[#605A57]">
                   <div className="flex items-center">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -149,12 +149,12 @@ export default function BookingsList({ bookings, onRefresh }: BookingsListProps)
                   <div className="text-xs text-[#828387] mt-2">
                     Requested on {formatDate(booking.created_at)}
                   </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
       ))}
-    </div>
+      </div>
   )
 }

@@ -30,17 +30,21 @@ export default function AdminStats() {
         const pendingApprovals = pendingBookings.length
 
         // Load all bookings for active count
-        // We'll estimate active bookings from pending + approved
-        // For now, we'll just show pending since we need all bookings endpoint
-        const activeBookings = 0 // TODO: Add endpoint for all bookings count
+        const allBookingsRes = await adminApi.getAllBookings()
+        const allBookings = allBookingsRes.bookings || []
+        const activeBookings = allBookings.filter((b: any) => b.status === 'APPROVED' || b.status === 'PENDING').length
+
+        // Load users count (excludes admins)
+        const usersRes = await adminApi.getUsers()
+        const systemUsers = usersRes.users?.length || 0
 
         setStats({
           totalEquipment,
           activeBookings,
           pendingApprovals,
-          systemUsers: 0, // TODO: Add users count endpoint
+          systemUsers,
           equipmentIssues,
-          overdueReturns: 0, // TODO: Calculate from bookings
+          overdueReturns: 0, // TODO: Calculate from bookings based on end_time
         })
       } catch (error) {
         console.error("Error loading admin stats:", error)
@@ -69,6 +73,12 @@ export default function AdminStats() {
       value: String(stats.pendingApprovals),
       change: stats.pendingApprovals > 0 ? "Needs attention" : "All clear",
       icon: "⏳",
+    },
+    {
+      label: "System Users",
+      value: String(stats.systemUsers),
+      change: `${stats.systemUsers} registered`,
+      icon: "👥",
     },
     {
       label: "Equipment Issues",

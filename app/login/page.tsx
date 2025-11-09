@@ -123,7 +123,7 @@ export default function LoginPage() {
       localStorage.setItem('userEmail', user.email)
       localStorage.setItem('userName', user.name)
 
-      // Route based on role
+        // Route based on role
       if (user.role === 'admin') {
         router.push('/admin')
       } else {

@@ -192,9 +192,9 @@ export default function PendingRequestsPage() {
           />
         )}
 
-        {/* Request Detail Modal */}
-        {selectedRequest && (
-          <RequestDetailModal
+      {/* Request Detail Modal */}
+      {selectedRequest && (
+        <RequestDetailModal
             request={{
               id: selectedRequest.id,
               equipment: selectedRequest.equipment_name,
@@ -208,11 +208,11 @@ export default function PendingRequestsPage() {
               priority: selectedRequest.priority,
               userRole: selectedRequest.user_role,
             }}
-            onClose={() => setSelectedRequest(null)}
+          onClose={() => setSelectedRequest(null)}
             onApprove={(adminNotes) => handleApprove(selectedRequest.id, adminNotes)}
             onReject={(adminNotes) => handleReject(selectedRequest.id, adminNotes)}
-          />
-        )}
+        />
+      )}
       </main>
     </div>
   )

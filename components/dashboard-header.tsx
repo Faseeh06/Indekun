@@ -26,11 +26,6 @@ export default function DashboardHeader({ userRole }: DashboardHeaderProps) {
               <Link href="/bookings" className="text-[#37322f] hover:text-[#37322f]/80 text-sm font-medium">
                 My Bookings
               </Link>
-              {userRole === "faculty" && (
-                <Link href="/admin" className="text-[#37322f] hover:text-[#37322f]/80 text-sm font-medium">
-                  Admin
-                </Link>
-              )}
             </div>
           </div>
 

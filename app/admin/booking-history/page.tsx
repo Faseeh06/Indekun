@@ -226,19 +226,19 @@ export default function BookingHistoryPage() {
             <p className="text-[#605A57] font-sans">Loading audit logs...</p>
           </div>
         ) : (
-          <div className="bg-white shadow-[0px_0px_0px_0.9px_rgba(0,0,0,0.08)] overflow-hidden rounded-[6px] border border-[#E0DEDB] overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-[#F7F5F3] border-b border-[#E0DEDB]">
-                <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Timestamp</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Action</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">User</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Equipment</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Status</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Details</th>
-                </tr>
-              </thead>
-              <tbody>
+        <div className="bg-white shadow-[0px_0px_0px_0.9px_rgba(0,0,0,0.08)] overflow-hidden rounded-[6px] border border-[#E0DEDB] overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-[#F7F5F3] border-b border-[#E0DEDB]">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Timestamp</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Action</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">User</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Equipment</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Status</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-[#37322F] font-sans">Details</th>
+              </tr>
+            </thead>
+            <tbody>
                 {filteredLogs.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-8 text-center text-[#605A57] font-sans">
@@ -247,33 +247,33 @@ export default function BookingHistoryPage() {
                   </tr>
                 ) : (
                   filteredLogs.map((log) => (
-                    <tr key={log.id} className="border-b border-[#E0DEDB] hover:bg-[#F7F5F3] transition-colors">
-                      <td className="px-6 py-4 text-sm text-[#605A57] font-sans font-mono">{log.timestamp}</td>
-                      <td className="px-6 py-4 text-sm text-[#37322F] font-sans font-semibold">
-                        {getActionLabel(log.action)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="text-sm font-semibold text-[#37322F] font-sans">{log.user}</p>
-                          <p className="text-xs text-[#828387] font-sans">{log.userEmail}</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-[#605A57] font-sans">{log.equipment}</td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold font-sans ${getStatusColor(log.status)}`}
-                        >
-                          {log.status.charAt(0).toUpperCase() + log.status.slice(1)}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-[#605A57] font-sans max-w-xs truncate" title={log.details}>
-                        {log.details}
-                      </td>
-                    </tr>
+                <tr key={log.id} className="border-b border-[#E0DEDB] hover:bg-[#F7F5F3] transition-colors">
+                  <td className="px-6 py-4 text-sm text-[#605A57] font-sans font-mono">{log.timestamp}</td>
+                  <td className="px-6 py-4 text-sm text-[#37322F] font-sans font-semibold">
+                    {getActionLabel(log.action)}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div>
+                      <p className="text-sm font-semibold text-[#37322F] font-sans">{log.user}</p>
+                      <p className="text-xs text-[#828387] font-sans">{log.userEmail}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-[#605A57] font-sans">{log.equipment}</td>
+                  <td className="px-6 py-4">
+                    <span
+                      className={`inline-block px-3 py-1 rounded-full text-xs font-semibold font-sans ${getStatusColor(log.status)}`}
+                    >
+                      {log.status.charAt(0).toUpperCase() + log.status.slice(1)}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-[#605A57] font-sans max-w-xs truncate" title={log.details}>
+                    {log.details}
+                  </td>
+                </tr>
                   ))
                 )}
-              </tbody>
-            </table>
+            </tbody>
+          </table>
           </div>
         )}
       </main>

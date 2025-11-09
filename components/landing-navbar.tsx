@@ -74,15 +74,14 @@ export default function LandingNavbar({
   const defaultNavItems: NavItem[] = userRole
     ? [
         ...(userRole === "admin"
-          ? [{ label: "Admin", href: "/admin" }]
+          ? [
+              { label: "Admin", href: "/admin" },
+            ]
           : [
               { label: "Dashboard", href: "/dashboard" },
               { label: "Equipment", href: "/equipment" },
               { label: "My Bookings", href: "/bookings" },
             ]),
-        ...(userRole === "faculty" && userRole !== "admin"
-          ? [{ label: "Admin", href: "/admin" }]
-          : []),
       ]
     : []
 

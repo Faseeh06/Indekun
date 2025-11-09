@@ -165,5 +165,9 @@ export const adminApi = {
       method: 'DELETE',
     })
   },
+  // User management
+  getUsers: async () => {
+    return apiRequest('/admin/users', { method: 'GET' })
+  },
 }
 

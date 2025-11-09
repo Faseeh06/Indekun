@@ -84,7 +84,7 @@ export default function DashboardPage() {
                     New Booking
                   </Button>
                 </Link>
-                {(userRole === "faculty" || userRole === "admin") && (
+                {userRole === "admin" && (
                   <Link href="/admin" className="w-full block">
                     <Button className="w-full justify-start bg-transparent border border-[#E0DEDB] text-[#37322F] hover:bg-[#F7F5F3] font-sans font-medium">
                       Admin Panel

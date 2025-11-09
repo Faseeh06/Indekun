@@ -12,6 +12,7 @@ interface PendingRequest {
   startDate: string
   endDate: string
   purpose: string
+  notes?: string
   priority: "low" | "medium" | "high"
   userRole: "student" | "faculty"
 }
@@ -96,9 +97,11 @@ export default function PendingRequestsTable({ requests, onRequestSelect, sortBy
                     </div>
                   </div>
 
-                  <div className="mt-2">
-                    <p className="text-xs text-slate-500 line-clamp-1">{request.notes}</p>
-                  </div>
+                  {request.notes && (
+                    <div className="mt-2">
+                      <p className="text-xs text-slate-500 line-clamp-1">{request.notes}</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Right Content - Days Until Needed */}
